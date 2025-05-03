@@ -58,8 +58,6 @@ describe('injectMutation', () => {
       }))
     })
 
-    TestBed.tick()
-
     mutation.mutate(result)
     vi.advanceTimersByTime(1)
 
