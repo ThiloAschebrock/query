@@ -4,7 +4,6 @@ import {
   NgZone,
   assertInInjectionContext,
   computed,
-  effect,
   inject,
   signal,
   untracked,
@@ -71,7 +70,15 @@ export function injectMutation<
       null
 
     return computed(() => {
-      return (instance ||= new MutationObserver(queryClient, optionsSignal()))
+      const observerOptions = optionsSignal()
+      return untracked(() => {
+        if (instance) {
+          instance.setOptions(observerOptions)
+        } else {
+          instance = new MutationObserver(queryClient, observerOptions)
+        }
+        return instance
+      })
     })
   })()
 
@@ -124,20 +131,6 @@ export function injectMutation<
 
     return observer.getCurrentResult()
   })
-
-  effect(
-    () => {
-      const observer = observerSignal()
-      const observerOptions = optionsSignal()
-
-      untracked(() => {
-        observer.setOptions(observerOptions)
-      })
-    },
-    {
-      injector,
-    },
-  )
 
   const resultSignal = computed(() => {
     const resultFromSubscriber = resultFromSubscriberSignal()
