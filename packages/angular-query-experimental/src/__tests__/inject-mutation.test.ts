@@ -316,7 +316,6 @@ describe('injectMutation', () => {
         <button (click)="mutate()"></button>
         <span>{{ mutation.data() }}</span>
       `,
-      standalone: true,
     })
     class FakeComponent {
       name = input.required<string>()
@@ -339,8 +338,6 @@ describe('injectMutation', () => {
     button.triggerEventHandler('click')
 
     await resolveMutations()
-    fixture.detectChanges()
-
     const text = debugElement.query(By.css('span')).nativeElement.textContent
     expect(text).toEqual('value')
     const mutation = mutationCache.find({ mutationKey: ['fake', 'value'] })
@@ -357,7 +354,6 @@ describe('injectMutation', () => {
         <button (click)="mutate()"></button>
         <span>{{ mutation.data() }}</span>
       `,
-      standalone: true,
     })
     class FakeComponent {
       name = input.required<string>()
@@ -398,6 +394,37 @@ describe('injectMutation', () => {
     const [mutation1, mutation2] = mutations
     expect(mutation1!.options.mutationKey).toEqual(['fake', 'value'])
     expect(mutation2!.options.mutationKey).toEqual(['fake', 'updatedValue'])
+  })
+
+  test('should have pending state when mutating in constructor', async () => {
+    @Component({
+      selector: 'app-fake',
+      template: `
+        <span>{{ mutation.isPending() ? 'pending' : 'not pending' }}</span>
+      `,
+    })
+    class FakeComponent {
+      mutation = injectMutation(() => ({
+        mutationKey: ['fake'],
+        mutationFn: () => sleep(0).then(() => 'fake'),
+      }))
+
+      constructor() {
+        this.mutation.mutate()
+      }
+    }
+
+    const fixture = TestBed.createComponent(FakeComponent)
+    const { debugElement } = fixture
+    const span = debugElement.query(By.css('span'))
+
+    vi.advanceTimersByTime(1)
+
+    expect(span.nativeElement.textContent).toEqual('pending')
+
+    await resolveMutations()
+
+    expect(span.nativeElement.textContent).toEqual('not pending')
   })
 
   describe('throwOnError', () => {
